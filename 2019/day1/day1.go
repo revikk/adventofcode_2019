@@ -9,6 +9,10 @@ import (
 	"strconv"
 )
 
+func massToFuel(mass float64) float64 {
+	return math.Trunc(float64(mass)/float64(3)) - 2
+}
+
 func main() {
 	file, err := os.Open("input")
 	defer file.Close()
@@ -19,15 +23,16 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	var result float64 = 0
 	for scanner.Scan() {
-		mass, err := strconv.Atoi(scanner.Text())
+		mass, err := strconv.ParseFloat(scanner.Text(), 64)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fuel := math.Trunc(float64(mass)/float64(3)) - 2
+		fuel := massToFuel(mass)
 		result += fuel
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+
 	fmt.Println(result)
 }
