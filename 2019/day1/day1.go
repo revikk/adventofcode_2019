@@ -10,7 +10,17 @@ import (
 )
 
 func massToFuel(mass float64) float64 {
-	return math.Trunc(float64(mass)/float64(3)) - 2
+	return math.Trunc(mass/float64(3)) - 2
+}
+
+func totalFuelForMass(mass float64) float64 {
+	var total float64
+	fuel := massToFuel(mass)
+	for fuel > 0 {
+		total += fuel
+		fuel = massToFuel(fuel)
+	}
+	return total
 }
 
 func main() {
@@ -27,7 +37,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fuel := massToFuel(mass)
+		// fuel := massToFuel(mass)
+		fuel := totalFuelForMass(mass)
 		result += fuel
 	}
 	if err := scanner.Err(); err != nil {
