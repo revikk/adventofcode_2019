@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func main() {
@@ -15,10 +17,19 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	var intCode []int
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
+		stringCodes := strings.Split(scanner.Text(), ",")
+		for _, stringCode := range stringCodes {
+			code, err := strconv.Atoi(stringCode)
+			if err != nil {
+				log.Fatal(err)
+			}
+			intCode = append(intCode, code)
+		}
 	}
 	if err = scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(intCode)
 }
