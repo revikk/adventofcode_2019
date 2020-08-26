@@ -32,4 +32,16 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(intCode)
+
+	for i := 0; i <= len(intCode); i += 4 {
+		switch intCode[i] {
+		case 1:
+			intCode[intCode[i+3]] = intCode[intCode[i+1]] + intCode[intCode[i+2]]
+		case 2:
+			intCode[intCode[i+3]] = intCode[intCode[i+1]] * intCode[intCode[i+2]]
+		case 99:
+			break
+		}
+	}
+	fmt.Println(intCode)
 }
