@@ -9,6 +9,20 @@ import (
 	"strings"
 )
 
+func processIntCode(intCode []int) []int {
+	for i := 0; i <= len(intCode); i += 4 {
+		switch intCode[i] {
+		case 1:
+			intCode[intCode[i+3]] = intCode[intCode[i+1]] + intCode[intCode[i+2]]
+		case 2:
+			intCode[intCode[i+3]] = intCode[intCode[i+1]] * intCode[intCode[i+2]]
+		case 99:
+			break
+		}
+	}
+	return intCode
+}
+
 func main() {
 	file, err := os.Open("input")
 	if err != nil {
@@ -31,17 +45,10 @@ func main() {
 	if err = scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(intCode)
 
-	for i := 0; i <= len(intCode); i += 4 {
-		switch intCode[i] {
-		case 1:
-			intCode[intCode[i+3]] = intCode[intCode[i+1]] + intCode[intCode[i+2]]
-		case 2:
-			intCode[intCode[i+3]] = intCode[intCode[i+1]] * intCode[intCode[i+2]]
-		case 99:
-			break
-		}
-	}
-	fmt.Println(intCode)
+	intCode[1] = 12
+	intCode[2] = 2
+
+	procesedIntCode := processIntCode(intCode)
+	fmt.Println(procesedIntCode[0])
 }
