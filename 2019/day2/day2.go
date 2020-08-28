@@ -23,6 +23,24 @@ func processIntCode(intCode []int) []int {
 	return intCode
 }
 
+func findNounAndVerbForOutput(intCode []int) (int, int) {
+	var noun, verb int
+	initIntCode := make([]int, len(intCode))
+	copy(initIntCode, intCode)
+	for noun = 0; noun <= 99; noun++ {
+		for verb = 0; verb <= 99; verb++ {
+			intCode[1] = noun
+			intCode[2] = verb
+			result := processIntCode(intCode)
+			if result[0] == 19690720 {
+				return noun, verb
+			}
+			copy(intCode, initIntCode)
+		}
+	}
+	return noun, verb
+}
+
 func main() {
 	file, err := os.Open("input")
 	if err != nil {
@@ -46,9 +64,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	intCode[1] = 12
-	intCode[2] = 2
+	// intCode[1] = 12
+	// intCode[2] = 2
+	// result := processIntCode(intCode)
+	// fmt.Printf("Day2 part 1 answer %v\n", result[0])
 
-	procesedIntCode := processIntCode(intCode)
-	fmt.Println(procesedIntCode[0])
+	noun, verb := findNounAndVerbForOutput(intCode)
+	fmt.Printf("Day2 part 2 answer %v\n", 100*noun+verb)
 }
