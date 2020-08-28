@@ -17,7 +17,7 @@ func processIntCode(intCode []int) []int {
 		case 2:
 			intCode[intCode[i+3]] = intCode[intCode[i+1]] * intCode[intCode[i+2]]
 		case 99:
-			break
+			return intCode
 		}
 	}
 	return intCode
