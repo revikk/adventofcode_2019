@@ -23,3 +23,39 @@ func TestManhattanDistance(t *testing.T) {
 	}
 
 }
+
+func TestConvertStepToDirection(t *testing.T) {
+	result := convertStepToDirection("R75")
+	if result.axis != "x" || result.distance != 75 {
+		t.Fatalf("Fail, expect %v, got %v", direction{"x", 75}, result)
+	}
+
+	result = convertStepToDirection("L75")
+	if result.axis != "x" || result.distance != -75 {
+		t.Fatalf("Fail, expect %v, got %v", direction{"x", -75}, result)
+	}
+
+	result = convertStepToDirection("U75")
+	if result.axis != "y" || result.distance != 75 {
+		t.Fatalf("Fail, expect %v, got %v", direction{"x", -75}, result)
+	}
+
+	result = convertStepToDirection("D75")
+	if result.axis != "y" || result.distance != -75 {
+		t.Fatalf("Fail, expect %v, got %v", direction{"x", -75}, result)
+	}
+}
+
+func TestConverPathToCoordinates(t *testing.T) {
+	result := convertPathToCoordinates("R75,D30,R83,U83,L12,D49,R71,U7,L72")
+	expect := []coordinate{
+		coordinate{0, 0}, coordinate{75, 0}, coordinate{75, -30},
+		coordinate{158, -30}, coordinate{158, 53}, coordinate{146, 53}, coordinate{146, 4},
+		coordinate{217, 4}, coordinate{217, 11}, coordinate{145, 11}}
+	for i, v := range result {
+		coord := expect[i]
+		if v.x != coord.x || v.y != coord.y {
+			t.Fatalf("Fail, expect %v, got %v", expect, result)
+		}
+	}
+}
