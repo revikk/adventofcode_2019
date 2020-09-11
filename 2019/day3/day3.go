@@ -1,73 +1,68 @@
-package main
+package day3
 
 import (
+	"image"
+	"log"
 	"strconv"
 	"strings"
 )
 
-type direction struct {
-	axis     string
-	distance int
+type point image.Point
+type wirePath map[point]struct{}
+type wire struct {
+	start point
+	end   point
+	path  wirePath
 }
 
-type coordinate struct {
-	x int
-	y int
+func (w *wire) addPoint(p point) {
+	w.path[p] = struct{}{}
+	w.end = p
 }
 
-func manhattanDistance(wirePaths []string) int {
-	coordinates1 := convertPathToCoordinates(wirePaths[0])
-	coordinates2 := convertPathToCoordinates(wirePaths[1])
-	var match []coordinate
-	for _, coord1 := range coordinates1 {
-		for _, coord2 := range coordinates2 {
-			if coord1.x == coord2.x && coord1.y == coord2.y {
-				match = append(match, coord1)
+func pathToWire(path string) wire {
+	w := wire{
+		start: point{0, 0},
+		end:   point{0, 0},
+		path:  wirePath{point{0, 0}: struct{}{}},
+	}
+
+	directions := strings.Split(path, ",")
+	for _, dir := range directions {
+		switch dir[:1] {
+		case "R":
+			steps := getSteps(dir)
+			for i := 1; i <= steps; i++ {
+				np := point{w.end.X + i, w.end.Y}
+				w.addPoint(np)
+			}
+		case "L":
+			steps := getSteps(dir)
+			for i := 1; i <= steps; i++ {
+				np := point{w.end.X - i, w.end.Y}
+				w.addPoint(np)
+			}
+		case "U":
+			steps := getSteps(dir)
+			for i := 1; i <= steps; i++ {
+				np := point{w.end.X, w.end.Y + i}
+				w.addPoint(np)
+			}
+		case "D":
+			steps := getSteps(dir)
+			for i := 1; i <= steps; i++ {
+				np := point{w.end.X, w.end.Y - i}
+				w.addPoint(np)
 			}
 		}
 	}
+	return w
 }
 
-func convertPathToCoordinates(path string) []coordinate {
-	steps := strings.Split(path, ",")
-	var dirs []direction
-	for _, step := range steps {
-		dir := convertStepToDirection(step)
-		dirs = append(dirs, dir)
+func getSteps(dir string) int {
+	steps, err := strconv.Atoi(dir[1:])
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	var coords []coordinate
-	coords = append(coords, coordinate{0, 0})
-	for _, dir := range dirs {
-		switch dir.axis {
-		case "x":
-			lastCoor := coords[len(coords)-1]
-			coords = append(coords, coordinate{lastCoor.x + dir.distance, lastCoor.y})
-		case "y":
-			lastCoor := coords[len(coords)-1]
-			coords = append(coords, coordinate{lastCoor.x, lastCoor.y + dir.distance})
-		}
-	}
-	return coords
-}
-
-func convertStepToDirection(step string) direction {
-	splittedStep := strings.SplitN(step, "", 2)
-	dis, _ := strconv.Atoi(splittedStep[1])
-	dir := direction{}
-	switch splittedStep[0] {
-	case "R":
-		dir = direction{axis: "x", distance: dis}
-	case "L":
-		dir = direction{axis: "x", distance: -1 * dis}
-	case "U":
-		dir = direction{axis: "y", distance: dis}
-	case "D":
-		dir = direction{axis: "y", distance: -1 * dis}
-	}
-	return dir
-}
-
-func main() {
-
+	return steps
 }
