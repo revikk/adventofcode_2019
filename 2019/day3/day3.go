@@ -1,7 +1,6 @@
 package day3
 
 import (
-	"fmt"
 	"image"
 	"log"
 	"strconv"
@@ -74,8 +73,7 @@ func crossing(w1, w2 wire) []point {
 	cross := make([]point, 0)
 	for k := range w1.path {
 		if v, ok := w2.path[k]; ok {
-			fmt.Print(v)
-			// cross = append(cross, v)
+			cross = append(cross, v)
 		}
 	}
 	return cross
