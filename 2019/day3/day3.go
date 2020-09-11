@@ -1,6 +1,7 @@
 package day3
 
 import (
+	"fmt"
 	"image"
 	"log"
 	"strconv"
@@ -16,7 +17,9 @@ type wire struct {
 }
 
 func (w *wire) addPoint(p point) {
-	w.path[p] = struct{}{}
+	if _, ok := w.path[p]; !ok {
+		w.path[p] = struct{}{}
+	}
 	w.end = p
 }
 
@@ -65,4 +68,15 @@ func getSteps(dir string) int {
 		log.Fatal(err)
 	}
 	return steps
+}
+
+func crossing(w1, w2 wire) []point {
+	cross := make([]point, 0)
+	for k := range w1.path {
+		if v, ok := w2.path[k]; ok {
+			fmt.Print(v)
+			// cross = append(cross, v)
+		}
+	}
+	return cross
 }

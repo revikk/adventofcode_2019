@@ -14,7 +14,6 @@ func TestPathToWire(t *testing.T) {
 			point{1, 0}: struct{}{},
 			point{1, 1}: struct{}{},
 			point{0, 1}: struct{}{},
-			point{0, 0}: struct{}{},
 		},
 	}
 
@@ -28,6 +27,23 @@ func TestPathToWire(t *testing.T) {
 	}
 	for k, v := range result.path {
 		if v != expect.path[k] {
+			t.Errorf("Fail, expect %v, got %v", expect, result)
+		}
+	}
+}
+
+func TestCrossing(t *testing.T) {
+	w1 := pathToWire("R1,U1,L1,D1")
+	w2 := pathToWire("D1,R2,U2,L2")
+
+	expect := []point{
+		point{0, 1},
+		point{1, 1},
+	}
+
+	result := crossing(w1, w2)
+	for i, v := range result {
+		if v != expect[i] {
 			t.Errorf("Fail, expect %v, got %v", expect, result)
 		}
 	}
