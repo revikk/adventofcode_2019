@@ -19,6 +19,9 @@ func (w *wire) addPoint(p point) {
 	if _, ok := w.path[p]; !ok {
 		w.path[p] = struct{}{}
 	}
+}
+
+func (w *wire) setEndPoint(p point) {
 	w.end = p
 }
 
@@ -31,30 +34,35 @@ func pathToWire(path string) wire {
 
 	directions := strings.Split(path, ",")
 	for _, dir := range directions {
+		np := point{0, 0}
 		switch dir[:1] {
 		case "R":
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
-				np := point{w.end.X + i, w.end.Y}
+				np = point{w.end.X + 1, w.end.Y}
 				w.addPoint(np)
+				w.setEndPoint(np)
 			}
 		case "L":
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
-				np := point{w.end.X - i, w.end.Y}
+				np = point{w.end.X - 1, w.end.Y}
 				w.addPoint(np)
+				w.setEndPoint(np)
 			}
 		case "U":
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
-				np := point{w.end.X, w.end.Y + i}
+				np = point{w.end.X, w.end.Y + 1}
 				w.addPoint(np)
+				w.setEndPoint(np)
 			}
 		case "D":
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
-				np := point{w.end.X, w.end.Y - i}
+				np = point{w.end.X, w.end.Y - 1}
 				w.addPoint(np)
+				w.setEndPoint(np)
 			}
 		}
 	}
@@ -72,8 +80,11 @@ func getSteps(dir string) int {
 func crossing(w1, w2 wire) []point {
 	cross := make([]point, 0)
 	for k := range w1.path {
-		if v, ok := w2.path[k]; ok {
-			cross = append(cross, v)
+		if k == w1.start {
+			continue
+		}
+		if _, ok := w2.path[k]; ok {
+			cross = append(cross, k)
 		}
 	}
 	return cross
