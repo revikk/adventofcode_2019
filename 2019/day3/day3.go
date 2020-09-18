@@ -3,6 +3,7 @@ package day3
 import (
 	"image"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -80,7 +81,7 @@ func getSteps(dir string) int {
 func crossing(w1, w2 wire) []point {
 	cross := make([]point, 0)
 	for k := range w1.path {
-		if k == w1.start {
+		if k.X == 0 && k.Y == 0 {
 			continue
 		}
 		if _, ok := w2.path[k]; ok {
@@ -88,4 +89,23 @@ func crossing(w1, w2 wire) []point {
 		}
 	}
 	return cross
+}
+
+func manhattanDistance(p1, p2 string) uint {
+	w1 := pathToWire(p1)
+	w2 := pathToWire(p2)
+
+	crossPoints := crossing(w1, w2)
+
+	var distance float64 = 0.0
+	for _, point := range crossPoints {
+		// actually, the formula is |x1 - x2| + |y1 - y2|, but
+		// control point is always in {0, 0} point. So the simplified formula is
+		newDistance := math.Abs(float64(point.X)) + math.Abs(float64(point.Y))
+		if distance == 0.0 {
+			distance = math.Max(distance, newDistance)
+		}
+		distance = math.Min(distance, newDistance)
+	}
+	return uint(distance)
 }
