@@ -9,7 +9,7 @@ import (
 )
 
 type point image.Point
-type wirePath map[point]struct{}
+type wirePath map[point]uint
 type wire struct {
 	start point
 	end   point
@@ -18,7 +18,7 @@ type wire struct {
 
 func (w *wire) addPoint(p point) {
 	if _, ok := w.path[p]; !ok {
-		w.path[p] = struct{}{}
+		w.path[p] = w.path[w.end] + 1
 	}
 }
 
@@ -30,7 +30,7 @@ func pathToWire(path string) wire {
 	w := wire{
 		start: point{0, 0},
 		end:   point{0, 0},
-		path:  wirePath{point{0, 0}: struct{}{}},
+		path:  wirePath{point{0, 0}: 0},
 	}
 
 	directions := strings.Split(path, ",")
@@ -79,7 +79,7 @@ func getSteps(dir string) int {
 }
 
 func crossing(w1, w2 wire) []point {
-	cross := make([]point, 0)
+	var cross []point
 	for k := range w1.path {
 		if k.X == 0 && k.Y == 0 {
 			continue
@@ -104,8 +104,28 @@ func manhattanDistance(p1, p2 string) uint {
 		newDistance := math.Abs(float64(point.X)) + math.Abs(float64(point.Y))
 		if distance == 0.0 {
 			distance = math.Max(distance, newDistance)
+			continue
 		}
 		distance = math.Min(distance, newDistance)
 	}
 	return uint(distance)
+}
+
+func minSignalDelay(p1, p2 string) uint {
+	w1 := pathToWire(p1)
+	w2 := pathToWire(p2)
+
+	crossPoints := crossing(w1, w2)
+	var intersectionMinSum uint = 0
+	for _, point := range crossPoints {
+		tempIntersectionMinSum := w1.path[point] + w2.path[point]
+		if intersectionMinSum == 0 && tempIntersectionMinSum != 0 {
+			intersectionMinSum = tempIntersectionMinSum
+			continue
+		}
+		if tempIntersectionMinSum < intersectionMinSum {
+			intersectionMinSum = tempIntersectionMinSum
+		}
+	}
+	return intersectionMinSum
 }
