@@ -12,10 +12,10 @@ func TestPathToWire(t *testing.T) {
 		start: point{0, 0},
 		end:   point{0, 0},
 		path: wirePath{
-			point{0, 0}: 0,
-			point{1, 0}: 1,
-			point{1, 1}: 2,
-			point{0, 1}: 3,
+			point{0, 0}: []int{0},
+			point{1, 0}: []int{1},
+			point{1, 1}: []int{2},
+			point{0, 1}: []int{3},
 		},
 	}
 
@@ -27,10 +27,13 @@ func TestPathToWire(t *testing.T) {
 	if len(result.path) != len(expect.path) {
 		t.Errorf("Fail, expect %v, got %v", expect, result)
 	}
-	for k, v := range result.path {
-		if v != expect.path[k] {
-			t.Errorf("Fail, expect %v, got %v", expect, result)
+	for point, pointPath := range result.path {
+		for i, v := range pointPath {
+			if v != expect.path[point][i] {
+				t.Errorf("Fail, expect %v, got %v", expect, result)
+			}
 		}
+
 	}
 }
 
@@ -75,7 +78,7 @@ func TestManhattanDistance(t *testing.T) {
 func TestMinSignalDelay(t *testing.T) {
 	input := []struct {
 		paths  []string
-		expect uint
+		expect int
 	}{
 		{[]string{"R75,D30,R83,U83,L12,D49,R71,U7,L72", "U62,R66,U55,R34,D71,R55,D58,R83"}, 610},
 		{[]string{"R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51", "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"}, 410},
