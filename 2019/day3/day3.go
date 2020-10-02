@@ -40,31 +40,25 @@ func pathToWire(path string) wire {
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
 				np = point{w.end.X + 1, w.end.Y}
-				w.addPoint(np)
-				w.setEndPoint(np)
 			}
 		case "L":
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
 				np = point{w.end.X - 1, w.end.Y}
-				w.addPoint(np)
-				w.setEndPoint(np)
 			}
 		case "U":
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
 				np = point{w.end.X, w.end.Y + 1}
-				w.addPoint(np)
-				w.setEndPoint(np)
 			}
 		case "D":
 			steps := getSteps(dir)
 			for i := 1; i <= steps; i++ {
 				np = point{w.end.X, w.end.Y - 1}
-				w.addPoint(np)
-				w.setEndPoint(np)
 			}
 		}
+		w.addPoint(np)
+		w.setEndPoint(np)
 	}
 	return w
 }
