@@ -12,7 +12,7 @@ func TestPathToWire(t *testing.T) {
 		start: point{0, 0},
 		end:   point{0, 0},
 		path: wirePath{
-			point{0, 0}: []int{0},
+			point{0, 0}: []int{0, 4},
 			point{1, 0}: []int{1},
 			point{1, 1}: []int{2},
 			point{0, 1}: []int{3},
@@ -28,6 +28,9 @@ func TestPathToWire(t *testing.T) {
 		t.Errorf("Fail, expect %v, got %v", expect, result)
 	}
 	for point, pointPath := range result.path {
+		if len(pointPath) != len(expect.path[point]) {
+			t.Fatalf("Fail, expect %v, got %v", expect, result)
+		}
 		for i, v := range pointPath {
 			if v != expect.path[point][i] {
 				t.Errorf("Fail, expect %v, got %v", expect, result)
