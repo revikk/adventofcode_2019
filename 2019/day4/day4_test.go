@@ -9,12 +9,12 @@ func TestIsValidPassword(t *testing.T) {
 		in  int
 		out bool
 	}{
-		{111111, true},
-		{223450, false},
-		{123789, false},
-		// {112233, true},
-		// {123444, false},
-		// {111122, true},
+		// {111111, true},
+		// {223450, false},
+		// {123789, false},
+		{112233, true},
+		{123444, false},
+		{111122, true},
 	}
 	for _, test := range input {
 		result := isValidPassword(test.in)

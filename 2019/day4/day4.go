@@ -3,6 +3,7 @@ package day4
 import (
 	"sort"
 	"strconv"
+	"strings"
 )
 
 func isValidPassword(password int) bool {
@@ -14,7 +15,17 @@ func isValidPassword(password int) bool {
 		func(i, j int) bool {
 			return strPassword[i] < strPassword[j]
 		})
-	if sorted {
-
+	if !sorted {
+		return false
 	}
+	for i := 0; i < len(strPassword); i++ {
+		lastIndex := strings.LastIndexByte(strPassword, strPassword[i])
+		if (lastIndex - i) == 1 {
+			firstIndex := strings.IndexByte(strPassword, strPassword[i])
+			if firstIndex == i {
+				return true
+			}
+		}
+	}
+	return false
 }
