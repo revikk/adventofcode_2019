@@ -1,6 +1,10 @@
 -module(day2).
 
--export([intcode/1]).
+-export([run/0, intcode/1]).
+
+run() ->
+    {ok, [Intcode]} = file:consult("input"),
+    intcode(Intcode).
 
 intcode(Intcode) ->
     do_intcode(1, Intcode).
