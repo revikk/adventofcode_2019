@@ -12,8 +12,10 @@ do_intcode(Position, Intcode) ->
 do_opcode(99, _, Intcode) ->
     Intcode;
 do_opcode(1, Position, Intcode) ->
-    Value1 = lists:nth(Position + 1, Intcode),
-    Value2 = lists:nth(Position + 2, Intcode),
+    From1 = lists:nth(Position + 1, Intcode),
+    Value1 = lists:nth(From1 + 1, Intcode),
+    From2 = lists:nth(Position + 2, Intcode),
+    Value2 = lists:nth(From2 + 1, Intcode),
     Sum = Value1 + Value2,
 
     SumPosition = lists:nth(Position + 3, Intcode),
@@ -21,8 +23,10 @@ do_opcode(1, Position, Intcode) ->
     NewIntcode = lists:append([Left, [Sum], Right]),
     do_intcode(Position + 4, NewIntcode);
 do_opcode(2, Position, Intcode) ->
-    Value1 = lists:nth(Position + 1, Intcode),
-    Value2 = lists:nth(Position + 2, Intcode),
+    From1 = lists:nth(Position + 1, Intcode),
+    Value1 = lists:nth(From1 + 1, Intcode),
+    From2 = lists:nth(Position + 2, Intcode),
+    Value2 = lists:nth(From2 + 1, Intcode),
     Multi = Value1 * Value2,
 
     MultiPosition = lists:nth(Position + 3, Intcode),
