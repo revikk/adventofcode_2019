@@ -9,31 +9,31 @@ run() ->
 intcode(Intcode) ->
     do_intcode(1, Intcode).
 
-do_intcode(Position, Intcode) ->
-    Opcode = lists:nth(Position, Intcode),
-    do_opcode(Opcode, Position, Intcode).
+do_intcode(InstructionPointer, Intcode) ->
+    Opcode = lists:nth(InstructionPointer, Intcode),
+    do_instruction(Opcode, InstructionPointer, Intcode).
 
-do_opcode(99, _, Intcode) ->
+do_instruction(99, _, Intcode) ->
     Intcode;
-do_opcode(1, Position, Intcode) ->
-    From1 = lists:nth(Position + 1, Intcode),
-    Value1 = lists:nth(From1 + 1, Intcode),
-    From2 = lists:nth(Position + 2, Intcode),
-    Value2 = lists:nth(From2 + 1, Intcode),
-    Sum = Value1 + Value2,
+do_instruction(1, InstructionPointer, Intcode) ->
+    Address1 = lists:nth(InstructionPointer + 1, Intcode),
+    Parameter1 = lists:nth(Address1 + 1, Intcode),
+    Address2 = lists:nth(InstructionPointer + 2, Intcode),
+    Parameter2 = lists:nth(Address2 + 1, Intcode),
+    Sum = Parameter1 + Parameter2,
 
-    SumPosition = lists:nth(Position + 3, Intcode),
-    {Left, [_ForSumValue | Right]} = lists:split(SumPosition, Intcode),
+    SumAddress = lists:nth(InstructionPointer + 3, Intcode),
+    {Left, [_ForSumValue | Right]} = lists:split(SumAddress, Intcode),
     NewIntcode = lists:append([Left, [Sum], Right]),
-    do_intcode(Position + 4, NewIntcode);
-do_opcode(2, Position, Intcode) ->
-    From1 = lists:nth(Position + 1, Intcode),
-    Value1 = lists:nth(From1 + 1, Intcode),
-    From2 = lists:nth(Position + 2, Intcode),
-    Value2 = lists:nth(From2 + 1, Intcode),
-    Multi = Value1 * Value2,
+    do_intcode(InstructionPointer + 4, NewIntcode);
+do_instruction(2, InstructionPointer, Intcode) ->
+    Address1 = lists:nth(InstructionPointer + 1, Intcode),
+    Parameter1 = lists:nth(Address1 + 1, Intcode),
+    Address2 = lists:nth(InstructionPointer + 2, Intcode),
+    Parameter2 = lists:nth(Address2 + 1, Intcode),
+    Multi = Parameter1 * Parameter2,
 
-    MultiPosition = lists:nth(Position + 3, Intcode),
-    {Left, [_ForMultiValue | Right]} = lists:split(MultiPosition, Intcode),
+    MultiAddress = lists:nth(InstructionPointer + 3, Intcode),
+    {Left, [_ForMultiValue | Right]} = lists:split(MultiAddress, Intcode),
     NewIntcode = lists:append([Left, [Multi], Right]),
-    do_intcode(Position + 4, NewIntcode).
+    do_intcode(InstructionPointer + 4, NewIntcode).
