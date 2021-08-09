@@ -1,8 +1,8 @@
 -module(day6).
 
--export([run/1]).
+-export([build_map/1, get_number_of_paths/1, get_number_of_transfers/1]).
 
-run(OrbitMap) ->
+build_map(OrbitMap) ->
     {ok, BinData} = file:read_file(OrbitMap),
     Orbits = binary:split(BinData, <<"\n">>, [global]),
 
@@ -14,9 +14,10 @@ run(OrbitMap) ->
                      digraph:add_edge(Map, Satellite, Center)
                   end,
                   Orbits),
+    Map.
 
+get_number_of_paths(Map) ->
     Planets = digraph:vertices(Map),
-
     CenterOfMass = <<"COM">>,
 
     lists:foldl(fun(Planet, NumOrbits) ->
@@ -27,3 +28,19 @@ run(OrbitMap) ->
                 end,
                 0,
                 Planets).
+
+get_number_of_transfers(Map) ->
+    You = <<"YOU">>,
+    San = <<"SAN">>,
+    CenterOfMass = <<"COM">>,
+
+    [YouCenter] = digraph:out_neighbours(Map, You),
+    [SanCenter] = digraph:out_neighbours(Map, San),
+
+    YouPath = digraph:get_path(Map, YouCenter, CenterOfMass),
+    SanPath = digraph:get_path(Map, SanCenter, CenterOfMass),
+
+    YouBranch = YouPath -- SanPath,
+    SanBranch = SanPath -- YouPath,
+
+    length(YouBranch ++ SanBranch).
