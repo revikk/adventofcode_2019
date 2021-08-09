@@ -12,7 +12,9 @@ run(Input) ->
 intcode(Intcode) ->
     intcode(-1, Intcode).
 
-intcode(Input, Intcode) ->
+intcode(Input, Intcode) when is_integer(Input) ->
+    do_intcode([Input], 1, Intcode, Intcode);
+intcode(Input, Intcode) when is_list(Input) ->
     do_intcode(Input, 1, Intcode, Intcode).
 
 do_intcode(Input, InstructionPointer, Intcode, Output) ->
@@ -60,11 +62,11 @@ do_instruction(Input,
     MultiAddress = lists:nth(InstructionPointer + 3, Intcode),
     NewIntcode = update_intcode_with_value_at_address(Multi, MultiAddress, Intcode),
     do_intcode(Input, InstructionPointer + 4, NewIntcode, NewIntcode);
-do_instruction(Input, #{opcode := 3}, InstructionPointer, Intcode, _Output) ->
+do_instruction([In | Tail], #{opcode := 3}, InstructionPointer, Intcode, _Output) ->
     InputAddress = lists:nth(InstructionPointer + 1, Intcode),
 
-    NewIntcode = update_intcode_with_value_at_address(Input, InputAddress, Intcode),
-    do_intcode(Input, InstructionPointer + 2, NewIntcode, NewIntcode);
+    NewIntcode = update_intcode_with_value_at_address(In, InputAddress, Intcode),
+    do_intcode(Tail, InstructionPointer + 2, NewIntcode, NewIntcode);
 do_instruction(Input,
                #{opcode := 4} = OpcodeAndModes,
                InstructionPointer,
