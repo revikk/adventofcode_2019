@@ -63,8 +63,8 @@ loop(InstructionPointer, Intcode, Output, Parent, Neighbor) ->
         {input, Input} ->
             case day5:do_intcode(Input, InstructionPointer, Intcode, Output) of
                 {waiting_input, NewInstructionPointer, NewIntcode, NewOutput} ->
-                    Neighbor ! {input, [NewOutput]},
-                    loop(NewInstructionPointer, NewIntcode, NewOutput, Parent, Neighbor);
+                    Neighbor ! {input, NewOutput},
+                    loop(NewInstructionPointer, NewIntcode, [], Parent, Neighbor);
                 Result ->
                     case erlang:is_process_alive(Neighbor) of
                         true ->

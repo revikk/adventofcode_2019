@@ -11,40 +11,49 @@ run(Input) ->
     intcode(Input, Intcode).
 
 intcode(Intcode) ->
-    intcode(-1, Intcode).
+    intcode([], Intcode).
 
 intcode(Input, Intcode) when is_integer(Input) ->
-    do_intcode([Input], 1, Intcode, -1);
+    intcode([Input], Intcode);
 intcode(Input, Intcode) when is_list(Input) ->
-    do_intcode(Input, 1, Intcode, -1).
+    do_intcode(Input, {1, 1}, Intcode, []).
 
-do_intcode(Input, InstructionPointer, Intcode, Output) when is_list(Input) ->
+do_intcode(Input, {InstructionPointer, RelativeBase}, Intcode, Output)
+    when is_list(Input) ->
     Instruction = lists:nth(InstructionPointer, Intcode),
 
     OpcodeAndModes = decode_instruction(Instruction),
 
-    do_instruction(Input, OpcodeAndModes, InstructionPointer, Intcode, Output).
+    do_instruction(Input,
+                   OpcodeAndModes,
+                   {InstructionPointer, RelativeBase},
+                   Intcode,
+                   Output).
 
 do_instruction(_Input, #{opcode := 99}, _, Intcode, Output) ->
     case Output of
-        -1 ->
+        [] ->
             Intcode;
+        [Digit] ->
+            Digit;
         _ ->
-            Output
+            lists:reverse(Output)
     end;
 do_instruction(Input,
                #{opcode := Opcode} = OpcodeAndModes,
-               InstructionPointer,
+               {InstructionPointer, RelativeBase},
                Intcode,
                Output)
     when Opcode == 1; Opcode == 2 ->
     #{first_param_mode := FirstParameterMode, second_param_mode := SecondParameterMode} =
         OpcodeAndModes,
 
-    ParameterValue1 =
-        get_parameter_value(InstructionPointer + 1, FirstParameterMode, Intcode),
-    ParameterValue2 =
-        get_parameter_value(InstructionPointer + 2, SecondParameterMode, Intcode),
+    {ParameterValue1, ExtendedIntcode1} =
+        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+    {ParameterValue2, ExtendedIntcode2} =
+        get_parameter_value({InstructionPointer + 2, RelativeBase},
+                            SecondParameterMode,
+                            ExtendedIntcode1),
 
     Result =
         case Opcode of
@@ -54,36 +63,45 @@ do_instruction(Input,
                 ParameterValue1 * ParameterValue2
         end,
 
-    ResultAddress = lists:nth(InstructionPointer + 3, Intcode),
-    NewIntcode = update_intcode_with_value_at_address(Result, ResultAddress, Intcode),
-    do_intcode(Input, InstructionPointer + 4, NewIntcode, Output);
-do_instruction([], #{opcode := 3}, InstructionPointer, Intcode, Output) ->
-    {waiting_input, InstructionPointer, Intcode, Output};
-do_instruction([In | Tail], #{opcode := 3}, InstructionPointer, Intcode, Output) ->
+    ResultAddress = lists:nth(InstructionPointer + 3, ExtendedIntcode2),
+    NewIntcode =
+        update_intcode_with_value_at_address(Result, ResultAddress, ExtendedIntcode2),
+    do_intcode(Input, {InstructionPointer + 4, RelativeBase}, NewIntcode, Output);
+do_instruction([], #{opcode := 3}, {InstructionPointer, RelativeBase}, Intcode, Output) ->
+    {waiting_input, {InstructionPointer, RelativeBase}, Intcode, Output};
+do_instruction([In | Tail],
+               #{opcode := 3},
+               {InstructionPointer, RelativeBase},
+               Intcode,
+               Output) ->
     InputAddress = lists:nth(InstructionPointer + 1, Intcode),
 
     NewIntcode = update_intcode_with_value_at_address(In, InputAddress, Intcode),
-    do_intcode(Tail, InstructionPointer + 2, NewIntcode, Output);
+    do_intcode(Tail, {InstructionPointer + 2, RelativeBase}, NewIntcode, Output);
 do_instruction(Input,
                #{opcode := 4} = OpcodeAndModes,
-               InstructionPointer,
+               {InstructionPointer, RelativeBase},
                Intcode,
-               _Output) ->
+               Output) ->
     #{first_param_mode := FirstParameterMode} = OpcodeAndModes,
 
-    FirstParameter = get_parameter_value(InstructionPointer + 1, FirstParameterMode, Intcode),
+    {FirstParameter, ExtendedIntcode1} =
+        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
 
-    do_intcode(Input, InstructionPointer + 2, Intcode, FirstParameter);
+    NewOutput = [FirstParameter | Output],
+
+    do_intcode(Input, {InstructionPointer + 2, RelativeBase}, ExtendedIntcode1, NewOutput);
 do_instruction(Input,
                #{opcode := Opcode} = OpcodeAndModes,
-               InstructionPointer,
+               {InstructionPointer, RelativeBase},
                Intcode,
                Output)
     when Opcode == 5; Opcode == 6 ->
     #{first_param_mode := FirstParameterMode, second_param_mode := SecondParameterMode} =
         OpcodeAndModes,
 
-    FirstParameter = get_parameter_value(InstructionPointer + 1, FirstParameterMode, Intcode),
+    {FirstParameter, ExtendedIntcode1} =
+        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
 
     Result =
         case Opcode of
@@ -95,27 +113,31 @@ do_instruction(Input,
 
     case Result of
         true ->
-            SecondParameter =
-                get_parameter_value(InstructionPointer + 2, SecondParameterMode, Intcode),
-            do_intcode(Input, SecondParameter + 1, Intcode, Output);
+            {SecondParameter, ExtendedIntcode2} =
+                get_parameter_value({InstructionPointer + 2, RelativeBase},
+                                    SecondParameterMode,
+                                    ExtendedIntcode1),
+            do_intcode(Input, {SecondParameter + 1, RelativeBase}, ExtendedIntcode2, Output);
         false ->
-            do_intcode(Input, InstructionPointer + 3, Intcode, Output)
+            do_intcode(Input, {InstructionPointer + 3, RelativeBase}, ExtendedIntcode1, Output)
     end;
 do_instruction(Input,
                #{opcode := Opcode} = OpcodeAndModes,
-               InstructionPointer,
+               {InstructionPointer, RelativeBase},
                Intcode,
                Output)
     when Opcode == 7; Opcode == 8 ->
     #{first_param_mode := FirstParameterMode, second_param_mode := SecondParameterMode} =
         OpcodeAndModes,
 
-    ParameterValue1 =
-        get_parameter_value(InstructionPointer + 1, FirstParameterMode, Intcode),
-    ParameterValue2 =
-        get_parameter_value(InstructionPointer + 2, SecondParameterMode, Intcode),
+    {ParameterValue1, ExtendedIntcode1} =
+        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+    {ParameterValue2, ExtendedIntcode2} =
+        get_parameter_value({InstructionPointer + 2, RelativeBase},
+                            SecondParameterMode,
+                            ExtendedIntcode1),
 
-    ResultAddress = lists:nth(InstructionPointer + 3, Intcode),
+    ResultAddress = lists:nth(InstructionPointer + 3, ExtendedIntcode2),
 
     Result =
         case Opcode of
@@ -128,15 +150,33 @@ do_instruction(Input,
     NewIntcode =
         case Result of
             true ->
-                update_intcode_with_value_at_address(1, ResultAddress, Intcode);
+                update_intcode_with_value_at_address(1, ResultAddress, ExtendedIntcode2);
             false ->
-                update_intcode_with_value_at_address(0, ResultAddress, Intcode)
+                update_intcode_with_value_at_address(0, ResultAddress, ExtendedIntcode2)
         end,
-    do_intcode(Input, InstructionPointer + 4, NewIntcode, Output).
+    do_intcode(Input, {InstructionPointer + 4, RelativeBase}, NewIntcode, Output);
+do_instruction(Input,
+               #{opcode := 9} = OpcodeAndModes,
+               {InstructionPointer, RelativeBase},
+               Intcode,
+               Output) ->
+    #{first_param_mode := FirstParameterMode} = OpcodeAndModes,
+
+    {ParameterValue1, ExtendedIntcode1} =
+        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+
+    NewRelativeBase = RelativeBase + ParameterValue1,
+    do_intcode(Input, {InstructionPointer + 2, NewRelativeBase}, ExtendedIntcode1, Output).
 
 update_intcode_with_value_at_address(NewValue, Address, Intcode) ->
-    {Left, [_OldValue | Right]} = lists:split(Address, Intcode),
-    lists:append([Left, [NewValue], Right]).
+    case Address >= length(Intcode) of
+        true ->
+            ExtendedIntcode = append_memory_for_address(Address, Intcode),
+            lists:append(ExtendedIntcode, [NewValue]);
+        false ->
+            {Left, [_OldValue | Right]} = lists:split(Address, Intcode),
+            lists:append([Left, [NewValue], Right])
+    end.
 
 decode_instruction(Instruction) when is_integer(Instruction) ->
     ThirdParameterDecoder = 10000,
@@ -159,13 +199,28 @@ decode_instruction(Instruction) when is_integer(Instruction) ->
       second_param_mode => SecondParameterMode,
       third_param_mode => ThirdParameterMode}.
 
-get_parameter_value(ParameterAddress, ParameterMode, Intcode) ->
+get_parameter_value({Pointer, RelativeBase}, ParameterMode, Intcode) ->
     PositionMode = 0,
     ImmediateMode = 1,
+    RelativeMode = 2,
     case ParameterMode of
         PositionMode ->
-            Address1 = lists:nth(ParameterAddress, Intcode),
-            lists:nth(Address1 + 1, Intcode);
+            Address1 = lists:nth(Pointer, Intcode),
+            ProgramMemory = length(Intcode),
+            case Address1 > ProgramMemory of
+                true ->
+                    ExtendedProgram = append_memory_for_address(Address1, Intcode),
+                    {lists:nth(Address1 + 1, ExtendedProgram), ExtendedProgram};
+                false ->
+                    {lists:nth(Address1 + 1, Intcode), Intcode}
+            end;
         ImmediateMode ->
-            lists:nth(ParameterAddress, Intcode)
+            {lists:nth(Pointer, Intcode), Intcode};
+        RelativeMode ->
+            Address1 = lists:nth(Pointer, Intcode),
+            {lists:nth(Address1 + RelativeBase, Intcode), Intcode}
     end.
+
+append_memory_for_address(Address, Intcode) ->
+    AdditionalMemory = lists:duplicate(Address + 1 - length(Intcode), 0),
+    lists:append(Intcode, AdditionalMemory).
