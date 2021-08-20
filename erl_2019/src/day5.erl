@@ -15,12 +15,16 @@ intcode(Intcode) ->
 
 intcode(Input, Intcode) when is_integer(Input) ->
     intcode([Input], Intcode);
-intcode(Input, Intcode) when is_list(Input) ->
-    do_intcode(Input, {1, 1}, Intcode, []).
+intcode(Input, Intcode) when is_list(Input), is_list(Intcode) ->
+    Positions = lists:seq(0, length(Intcode) - 1),
+    Intcode2 =
+        maps:from_list(
+            lists:zip(Positions, Intcode)),
+    do_intcode(Input, {0, 0}, Intcode2, []).
 
 do_intcode(Input, {InstructionPointer, RelativeBase}, Intcode, Output)
-    when is_list(Input) ->
-    Instruction = lists:nth(InstructionPointer, Intcode),
+    when is_list(Input), is_map(Intcode) ->
+    Instruction = maps:get(InstructionPointer, Intcode),
 
     OpcodeAndModes = decode_instruction(Instruction),
 
@@ -33,7 +37,10 @@ do_intcode(Input, {InstructionPointer, RelativeBase}, Intcode, Output)
 do_instruction(_Input, #{opcode := 99}, _, Intcode, Output) ->
     case Output of
         [] ->
-            Intcode;
+            {_, Values} =
+                lists:unzip(
+                    lists:keysort(1, maps:to_list(Intcode))),
+            Values;
         [Digit] ->
             Digit;
         _ ->
@@ -63,18 +70,26 @@ do_instruction(Input,
                 ParameterValue1 * ParameterValue2
         end,
 
-    ResultAddress = lists:nth(InstructionPointer + 3, ExtendedIntcode2),
+    ResultAddress = maps:get(InstructionPointer + 3, ExtendedIntcode2),
     NewIntcode =
         update_intcode_with_value_at_address(Result, ResultAddress, ExtendedIntcode2),
     do_intcode(Input, {InstructionPointer + 4, RelativeBase}, NewIntcode, Output);
 do_instruction([], #{opcode := 3}, {InstructionPointer, RelativeBase}, Intcode, Output) ->
     {waiting_input, {InstructionPointer, RelativeBase}, Intcode, Output};
 do_instruction([In | Tail],
-               #{opcode := 3},
+               #{opcode := 3} = OpcodeAndModes,
                {InstructionPointer, RelativeBase},
                Intcode,
                Output) ->
-    InputAddress = lists:nth(InstructionPointer + 1, Intcode),
+    #{first_param_mode := FirstParameterMode} = OpcodeAndModes,
+    InputAddress =
+        case FirstParameterMode of
+            0 ->
+                maps:get(InstructionPointer + 1, Intcode);
+            2 ->
+                Offset = maps:get(InstructionPointer + 1, Intcode),
+                Offset + RelativeBase
+        end,
 
     NewIntcode = update_intcode_with_value_at_address(In, InputAddress, Intcode),
     do_intcode(Tail, {InstructionPointer + 2, RelativeBase}, NewIntcode, Output);
@@ -117,7 +132,7 @@ do_instruction(Input,
                 get_parameter_value({InstructionPointer + 2, RelativeBase},
                                     SecondParameterMode,
                                     ExtendedIntcode1),
-            do_intcode(Input, {SecondParameter + 1, RelativeBase}, ExtendedIntcode2, Output);
+            do_intcode(Input, {SecondParameter, RelativeBase}, ExtendedIntcode2, Output);
         false ->
             do_intcode(Input, {InstructionPointer + 3, RelativeBase}, ExtendedIntcode1, Output)
     end;
@@ -137,7 +152,7 @@ do_instruction(Input,
                             SecondParameterMode,
                             ExtendedIntcode1),
 
-    ResultAddress = lists:nth(InstructionPointer + 3, ExtendedIntcode2),
+    ResultAddress = maps:get(InstructionPointer + 3, ExtendedIntcode2),
 
     Result =
         case Opcode of
@@ -169,14 +184,7 @@ do_instruction(Input,
     do_intcode(Input, {InstructionPointer + 2, NewRelativeBase}, ExtendedIntcode1, Output).
 
 update_intcode_with_value_at_address(NewValue, Address, Intcode) ->
-    case Address >= length(Intcode) of
-        true ->
-            ExtendedIntcode = append_memory_for_address(Address, Intcode),
-            lists:append(ExtendedIntcode, [NewValue]);
-        false ->
-            {Left, [_OldValue | Right]} = lists:split(Address, Intcode),
-            lists:append([Left, [NewValue], Right])
-    end.
+    maps:put(Address, NewValue, Intcode).
 
 decode_instruction(Instruction) when is_integer(Instruction) ->
     ThirdParameterDecoder = 10000,
@@ -205,22 +213,22 @@ get_parameter_value({Pointer, RelativeBase}, ParameterMode, Intcode) ->
     RelativeMode = 2,
     case ParameterMode of
         PositionMode ->
-            Address1 = lists:nth(Pointer, Intcode),
-            ProgramMemory = length(Intcode),
-            case Address1 > ProgramMemory of
+            Address1 = maps:get(Pointer, Intcode),
+            case maps:is_key(Address1, Intcode) of
                 true ->
-                    ExtendedProgram = append_memory_for_address(Address1, Intcode),
-                    {lists:nth(Address1 + 1, ExtendedProgram), ExtendedProgram};
+                    {maps:get(Address1, Intcode), Intcode};
                 false ->
-                    {lists:nth(Address1 + 1, Intcode), Intcode}
+                    {0, maps:put(Address1, 0, Intcode)}
             end;
         ImmediateMode ->
-            {lists:nth(Pointer, Intcode), Intcode};
+            {maps:get(Pointer, Intcode), Intcode};
         RelativeMode ->
-            Address1 = lists:nth(Pointer, Intcode),
-            {lists:nth(Address1 + RelativeBase, Intcode), Intcode}
+            Offset = maps:get(Pointer, Intcode),
+            Address1 = Offset + RelativeBase,
+            case maps:is_key(Address1, Intcode) of
+                true ->
+                    {maps:get(Address1, Intcode), Intcode};
+                false ->
+                    {0, maps:put(Address1, 0, Intcode)}
+            end
     end.
-
-append_memory_for_address(Address, Intcode) ->
-    AdditionalMemory = lists:duplicate(Address + 1 - length(Intcode), 0),
-    lists:append(Intcode, AdditionalMemory).
