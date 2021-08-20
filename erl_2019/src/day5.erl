@@ -52,14 +52,20 @@ do_instruction(Input,
                Intcode,
                Output)
     when Opcode == 1; Opcode == 2 ->
-    #{first_param_mode := FirstParameterMode, second_param_mode := SecondParameterMode} =
+    #{first_param_mode := FirstParameterMode,
+      second_param_mode := SecondParameterMode,
+      third_param_mode := ThirdParamertMode} =
         OpcodeAndModes,
 
     {ParameterValue1, ExtendedIntcode1} =
-        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+        get_parameter_value({InstructionPointer + 1, RelativeBase},
+                            FirstParameterMode,
+                            read,
+                            Intcode),
     {ParameterValue2, ExtendedIntcode2} =
         get_parameter_value({InstructionPointer + 2, RelativeBase},
                             SecondParameterMode,
+                            read,
                             ExtendedIntcode1),
 
     Result =
@@ -70,9 +76,13 @@ do_instruction(Input,
                 ParameterValue1 * ParameterValue2
         end,
 
-    ResultAddress = maps:get(InstructionPointer + 3, ExtendedIntcode2),
+    {ResultAddress, ExtendedIntcode3} =
+        get_parameter_value({InstructionPointer + 3, RelativeBase},
+                            ThirdParamertMode,
+                            write,
+                            ExtendedIntcode2),
     NewIntcode =
-        update_intcode_with_value_at_address(Result, ResultAddress, ExtendedIntcode2),
+        update_intcode_with_value_at_address(Result, ResultAddress, ExtendedIntcode3),
     do_intcode(Input, {InstructionPointer + 4, RelativeBase}, NewIntcode, Output);
 do_instruction([], #{opcode := 3}, {InstructionPointer, RelativeBase}, Intcode, Output) ->
     {waiting_input, {InstructionPointer, RelativeBase}, Intcode, Output};
@@ -82,16 +92,13 @@ do_instruction([In | Tail],
                Intcode,
                Output) ->
     #{first_param_mode := FirstParameterMode} = OpcodeAndModes,
-    InputAddress =
-        case FirstParameterMode of
-            0 ->
-                maps:get(InstructionPointer + 1, Intcode);
-            2 ->
-                Offset = maps:get(InstructionPointer + 1, Intcode),
-                Offset + RelativeBase
-        end,
+    {InputAddress, ExtendedIntcode1} =
+        get_parameter_value({InstructionPointer + 1, RelativeBase},
+                            FirstParameterMode,
+                            write,
+                            Intcode),
 
-    NewIntcode = update_intcode_with_value_at_address(In, InputAddress, Intcode),
+    NewIntcode = update_intcode_with_value_at_address(In, InputAddress, ExtendedIntcode1),
     do_intcode(Tail, {InstructionPointer + 2, RelativeBase}, NewIntcode, Output);
 do_instruction(Input,
                #{opcode := 4} = OpcodeAndModes,
@@ -101,7 +108,10 @@ do_instruction(Input,
     #{first_param_mode := FirstParameterMode} = OpcodeAndModes,
 
     {FirstParameter, ExtendedIntcode1} =
-        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+        get_parameter_value({InstructionPointer + 1, RelativeBase},
+                            FirstParameterMode,
+                            read,
+                            Intcode),
 
     NewOutput = [FirstParameter | Output],
 
@@ -116,7 +126,10 @@ do_instruction(Input,
         OpcodeAndModes,
 
     {FirstParameter, ExtendedIntcode1} =
-        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+        get_parameter_value({InstructionPointer + 1, RelativeBase},
+                            FirstParameterMode,
+                            read,
+                            Intcode),
 
     Result =
         case Opcode of
@@ -131,6 +144,7 @@ do_instruction(Input,
             {SecondParameter, ExtendedIntcode2} =
                 get_parameter_value({InstructionPointer + 2, RelativeBase},
                                     SecondParameterMode,
+                                    read,
                                     ExtendedIntcode1),
             do_intcode(Input, {SecondParameter, RelativeBase}, ExtendedIntcode2, Output);
         false ->
@@ -142,17 +156,26 @@ do_instruction(Input,
                Intcode,
                Output)
     when Opcode == 7; Opcode == 8 ->
-    #{first_param_mode := FirstParameterMode, second_param_mode := SecondParameterMode} =
+    #{first_param_mode := FirstParameterMode,
+      second_param_mode := SecondParameterMode,
+      third_param_mode := ThirdParamertMode} =
         OpcodeAndModes,
 
     {ParameterValue1, ExtendedIntcode1} =
-        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+        get_parameter_value({InstructionPointer + 1, RelativeBase},
+                            FirstParameterMode,
+                            read,
+                            Intcode),
     {ParameterValue2, ExtendedIntcode2} =
         get_parameter_value({InstructionPointer + 2, RelativeBase},
                             SecondParameterMode,
+                            read,
                             ExtendedIntcode1),
-
-    ResultAddress = maps:get(InstructionPointer + 3, ExtendedIntcode2),
+    {ResultAddress, ExtendedIntcode3} =
+        get_parameter_value({InstructionPointer + 3, RelativeBase},
+                            ThirdParamertMode,
+                            write,
+                            ExtendedIntcode2),
 
     Result =
         case Opcode of
@@ -165,9 +188,9 @@ do_instruction(Input,
     NewIntcode =
         case Result of
             true ->
-                update_intcode_with_value_at_address(1, ResultAddress, ExtendedIntcode2);
+                update_intcode_with_value_at_address(1, ResultAddress, ExtendedIntcode3);
             false ->
-                update_intcode_with_value_at_address(0, ResultAddress, ExtendedIntcode2)
+                update_intcode_with_value_at_address(0, ResultAddress, ExtendedIntcode3)
         end,
     do_intcode(Input, {InstructionPointer + 4, RelativeBase}, NewIntcode, Output);
 do_instruction(Input,
@@ -178,7 +201,10 @@ do_instruction(Input,
     #{first_param_mode := FirstParameterMode} = OpcodeAndModes,
 
     {ParameterValue1, ExtendedIntcode1} =
-        get_parameter_value({InstructionPointer + 1, RelativeBase}, FirstParameterMode, Intcode),
+        get_parameter_value({InstructionPointer + 1, RelativeBase},
+                            FirstParameterMode,
+                            read,
+                            Intcode),
 
     NewRelativeBase = RelativeBase + ParameterValue1,
     do_intcode(Input, {InstructionPointer + 2, NewRelativeBase}, ExtendedIntcode1, Output).
@@ -207,28 +233,36 @@ decode_instruction(Instruction) when is_integer(Instruction) ->
       second_param_mode => SecondParameterMode,
       third_param_mode => ThirdParameterMode}.
 
-get_parameter_value({Pointer, RelativeBase}, ParameterMode, Intcode) ->
+get_parameter_value({Pointer, RelativeBase}, ParameterMode, OperationMode, Intcode) ->
     PositionMode = 0,
     ImmediateMode = 1,
     RelativeMode = 2,
     case ParameterMode of
         PositionMode ->
             Address1 = maps:get(Pointer, Intcode),
-            case maps:is_key(Address1, Intcode) of
-                true ->
-                    {maps:get(Address1, Intcode), Intcode};
-                false ->
-                    {0, maps:put(Address1, 0, Intcode)}
+            case OperationMode of
+                read ->
+                    get_value_at_address(Address1, Intcode);
+                write ->
+                    {Address1, Intcode}
             end;
         ImmediateMode ->
             {maps:get(Pointer, Intcode), Intcode};
         RelativeMode ->
             Offset = maps:get(Pointer, Intcode),
             Address1 = Offset + RelativeBase,
-            case maps:is_key(Address1, Intcode) of
-                true ->
-                    {maps:get(Address1, Intcode), Intcode};
-                false ->
-                    {0, maps:put(Address1, 0, Intcode)}
+            case OperationMode of
+                read ->
+                    get_value_at_address(Address1, Intcode);
+                write ->
+                    {Address1, Intcode}
             end
+    end.
+
+get_value_at_address(Address, Intcode) ->
+    case maps:is_key(Address, Intcode) of
+        true ->
+            {maps:get(Address, Intcode), Intcode};
+        false ->
+            {0, maps:put(Address, 0, Intcode)}
     end.
