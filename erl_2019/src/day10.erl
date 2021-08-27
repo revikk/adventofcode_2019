@@ -6,25 +6,24 @@ get_first_star() ->
     run("priv/day10_input").
 
 get_second_star() ->
-    Coordinates = decode_map("priv/day10_test2_input"),
-    {P, Of1} = offsets({5, 8}, Coordinates -- [{5, 8}]),
-    {NegH, PosH} = same_horizontale(Of1),
-    {NegV, PosV} = same_vertical(Of1 -- NegH ++ PosH),
-    Ds = same_diagonal(Of1 -- NegH ++ PosH ++ NegV ++ PosV),
-
-    merge(lists:map(fun(D) -> nearest_in_diagonale(sort(D)) end, Ds), [[], [], [], []]).
-
-merge([], [A, B, C, D]) ->
-    [lists:flatten(A), lists:flatten(B), lists:flatten(C), lists:flatten(D)];
-merge([[A1, B1, C1, D1] | T], [A, B, C, D]) ->
-    merge(T, [[A1 | A], [B1 | B], [C1 | C], [D1 | D]]).
-
-    % {P,
-    %  remove_empty(nearest_in_vertical(sort(NegV)))
-    %  ++ remove_empty(nearest_in_horizontale(sort(PosH)))
-    %  ++ remove_empty(nearest_in_vertical(sort(PosV)))
-    %  ++ remove_empty(nearest_in_horizontale(sort(NegH)))
-    %  ++ lists:map(fun(D) -> remove_empty(nearest_in_diagonale(sort(D))) end, Ds)}.
+    {{XPoint, YPoint}, Offs, _LenOffs} = run("priv/day10_input"),
+    [_As, _Bs, _Cs, Ds] =
+        lists:foldl(fun ({X, Y} = P, [A, B, C, D]) when (X >= 0) and (Y < 0) ->
+                            [[P | A], B, C, D];
+                        ({X, Y} = P, [A, B, C, D]) when (X >= 0) and (Y >= 0) ->
+                            [A, [P | B], C, D];
+                        ({X, Y} = P, [A, B, C, D]) when (X < 0) and (Y >= 0) ->
+                            [A, B, [P | C], D];
+                        ({X, Y} = P, [A, B, C, D]) when (X < 0) and (Y < 0) ->
+                            [A, B, C, [{P, Y / X} | D]]
+                    end,
+                    [[], [], [], []],
+                    Offs),
+    % the length of nearest asteroids in each qudrant is {61,12,41,189}
+    % the 200th is in the 4th one. 61 + 12 + 41 = 114; 200 - 114 = 86
+    % so need to take the 86th from the 4th quadrant.
+    {{XOff, YOff}, _} = lists:nth(86, lists:keysort(2, Ds)),
+    (XPoint + XOff) * 100 + YPoint + YOff.
 
 run(MapPath) ->
     Coordinates = decode_map(MapPath),
@@ -55,7 +54,7 @@ run(MapPath) ->
                     hd(A),
                     tl(A)),
 
-    {P, length(S)}.
+    {P, S, length(S)}.
 
 remove_duplicates(Line) ->
     lists:foldl(fun(Point, Acc) ->
