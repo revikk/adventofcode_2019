@@ -1,9 +1,7 @@
 -module(intcode).
 
--export([init/0, set/2, run/0]).
+-export([init/0, set/3, send/2]).
 -export([loop/1]).
-
--define(INTCODE_MACHINE, intcode_machine).
 
 -type input() :: [] | [integer()].
 -type output() :: [] | [integer()].
@@ -14,41 +12,38 @@
     input | output | intcode | instructionPointer | relativeBase | replyTo.
 -type state() ::
     #{atom() := input() | output() | intcode() | instructionPointer() | relativeBase()}.
+-type commands() :: run | get_state | terminate.
 
--spec init() -> true.
+-spec init() -> pid().
 init() ->
-    InitState = new_state(),
-    MachineId = spawn(?MODULE, loop, [InitState]),
-    register(?INTCODE_MACHINE, MachineId).
+    spawn(?MODULE, loop, [new_state()]).
 
--spec run() -> output().
-run() ->
-    ?INTCODE_MACHINE ! {run, self()},
-    MachineId = whereis(?INTCODE_MACHINE),
+-spec send(MachineId :: pid(), Command :: commands()) -> any().
+send(MachineId, Command) ->
+    MachineId ! {Command, self()},
     receive
         {MachineId, Output} ->
             Output
     end.
 
--spec set(Key :: state_keys(), Value :: any()) -> {state_keys(), any()}.
-set(intcode, IntcodePath) ->
+-spec set(MachineId :: pid(), Key :: state_keys(), Value :: any()) ->
+             {state_keys(), any()}.
+set(MachineId, intcode, {file, IntcodePath}) ->
     {ok, [Intcode]} = file:consult(IntcodePath),
-
+    set(MachineId, intcode, {list, Intcode});
+set(MachineId, intcode, {list, Intcode}) ->
     Indexes = lists:seq(0, length(Intcode) - 1),
     IndexedIntcode =
         maps:from_list(
             lists:zip(Indexes, Intcode)),
 
-    ?INTCODE_MACHINE ! {intcode, IndexedIntcode};
-set(Key, Value) ->
-    ?INTCODE_MACHINE ! {Key, Value}.
+    MachineId ! {intcode, IndexedIntcode}.
 
--spec loop(State :: state()) -> done | function().
+-spec loop(State :: state()) -> function() | {pid(), ok}.
 loop(State) ->
     receive
         {intcode, Intcode} ->
-            NewState = State#{intcode => Intcode},
-            loop(NewState);
+            loop(new_state(Intcode));
         {run, From} ->
             #{instructionPointer := InstructionPointer, intcode := Intcode} = State,
             {NewInstructionPointer, NewIntcode} = do_instruction(InstructionPointer, Intcode),
@@ -63,7 +58,12 @@ loop(State) ->
                 lists:unzip(
                     lists:keysort(1, maps:to_list(Intcode))),
             ReplyTo ! {self(), Reply},
-            done
+            loop(new_state());
+        {get_state, From} ->
+            From ! {self(), State},
+            loop(State);
+        {terminate, From} ->
+            From ! {self(), ok}
     end.
 
 -spec do_instruction(InstructionPointer :: instructionPointer(), Intcode :: intcode()) ->
@@ -95,8 +95,12 @@ do_instruction(InstructionPointer, Intcode) ->
 
 -spec new_state() -> state().
 new_state() ->
-    maps:from_list(init_values()).
+    new_state(#{}).
 
--spec init_values() -> [{state_keys(), any()}].
-init_values() ->
-    [{input, []}, {output, []}, {intcode, #{}}, {instructionPointer, 0}, {relativeBase, 0}].
+-spec new_state(Intcode :: intcode()) -> state().
+new_state(Intcode) ->
+    #{input => [],
+      output => [],
+      intcode => Intcode,
+      instructionPointer => 0,
+      relativeBase => 0}.
