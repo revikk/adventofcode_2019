@@ -13,6 +13,7 @@
 -type state() ::
     #{atom() := input() | output() | intcode() | instructionPointer() | relativeBase()}.
 -type commands() :: run | get_state | terminate.
+-type opcode() :: '+' | '*' | in | out | exit.
 
 -spec init() -> pid().
 init() ->
@@ -45,14 +46,9 @@ loop(State) ->
         {intcode, Intcode} ->
             loop(new_state(Intcode));
         {run, From} ->
-            #{instructionPointer := InstructionPointer, intcode := Intcode} = State,
-            {NewInstructionPointer, NewIntcode} = do_instruction(InstructionPointer, Intcode),
-            NewState =
-                State#{replyTo => From,
-                       intcode => NewIntcode,
-                       instructionPointer => NewInstructionPointer},
-            loop(NewState);
-        halt ->
+            NewState = do_instruction(State),
+            loop(NewState#{replyTo => From});
+        done ->
             #{replyTo := ReplyTo, intcode := Intcode} = State,
             {_Indexes, Reply} =
                 lists:unzip(
@@ -66,9 +62,9 @@ loop(State) ->
             From ! {self(), ok}
     end.
 
--spec do_instruction(InstructionPointer :: instructionPointer(), Intcode :: intcode()) ->
-                        {instructionPointer(), intcode()}.
-do_instruction(InstructionPointer, Intcode) ->
+-spec do_instruction(State :: state()) -> state().
+do_instruction(State) ->
+    #{instructionPointer := InstructionPointer, intcode := Intcode} = State,
     #{InstructionPointer := Opcode} = Intcode,
 
     case Opcode of
@@ -87,10 +83,28 @@ do_instruction(InstructionPointer, Intcode) ->
                         Value1 * Value2
                 end,
 
-            do_instruction(InstructionPointer + 4, Intcode#{ResultAddress => Result});
+            NewState =
+                State#{instructionPointer => InstructionPointer + 4,
+                       intcode => Intcode#{ResultAddress => Result}},
+
+            do_instruction(NewState);
+        3 ->
+            #{InstructionPointer + 1 := Address} = Intcode,
+            #{input := [I | Input]} = State,
+            NewIntcode = Intcode#{Address => I},
+
+            do_instruction(State#{input => Input,
+                                  instructionPointer => InstructionPointer + 2,
+                                  intcode => NewIntcode});
+        4 ->
+            #{InstructionPointer + 1 := Address} = Intcode,
+            #{Address := Value} = Intcode,
+            #{output := Output} = State,
+            do_instruction(State#{instructionPointer => InstructionPointer + 2,
+                                  output => [Value | Output]});
         99 ->
-            self() ! halt,
-            {InstructionPointer, Intcode}
+            self() ! done,
+            State
     end.
 
 -spec new_state() -> state().
